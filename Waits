@@ -1,0 +1,94 @@
+SQL SERVER WAIT TYPES
+ 
+ CX_SYNCPORT is a SQL Server wait type related to parallel query execution
+  Force serial execution for a specific query:
+  OPTION (MAXDOP 1);
+ CX_SYNCPORT = parallel threads waiting on each other
+
+ LOGBUFFER occurs when:
+  A session has log records to flush
+  The log buffer is full
+  SQL Server must wait for log flush to disk before it can continue
+  Running two jobs updating the same database with large data might cause this
+   SELECT name, recovery_model_desc
+   FROM sys.databases;
+
+What WRITELOG means
+A session waits on WRITELOG when:
+SQL Server must flush transaction log records to disk
+The session is waiting for the log write to complete
+The transaction cannot commit until the log is hardened
+
+LOGBUFFER	Waiting for space in log buffer
+WRITELOG	Waiting for log flush to disk
+
+What PAGELATCH_EX means
+A session is waiting because:
+Another session holds an exclusive latch on the same memory page
+SQL Server must serialize access to that page
+Too many sessions are trying to modify the same page at the same time.
+    TempDB contention (VERY common on RDS) -- Can cause PAGELAYCH_EX wait type
+SELECT
+    r.session_id,
+    r.wait_type,
+    r.wait_resource,
+    DB_NAME(r.database_id) AS database_name,
+    t.text
+FROM sys.dm_exec_requests r
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t
+WHERE r.wait_type = 'PAGELATCH_EX';
+
+What IO_COMPLETION means
+A task is waiting because:
+SQL Server issued a read or write request
+The OS / storage subsystem has not completed it yet
+SQL Server is waiting for confirmation
+In short:
+SQL Server is waiting on storage.
+
+What CX_CONSUMER means
+It occurs in parallel queries
+One or more worker threads are waiting to consume rows
+Usually waiting on other parallel workers to produce data
+In simple terms:
+Some threads are done and waiting while others are still working.
+
+CX_CONSUMER vs CXPACKET
+Wait Type	Meaning
+CXPACKET	Threads waiting for others (producer side)
+CX_CONSUMER	Threads waiting to consume rows (consumer side)
+
+👉 CX_CONSUMER by itself is usually benign
+👉 CXPACKET + CX_SYNCPORT is more concerning
+
+query 
+sys.dm_os_wait_stats
+
+--QUERY TO FIND CURRENCT ACTIVE in RDS
+SELECT
+    r.session_id,
+    s.login_name,
+    s.host_name,
+    s.program_name,
+    r.status,
+    r.start_time,
+    r.command,
+    r.wait_type,
+    r.wait_time,
+    r.cpu_time,
+    r.total_elapsed_time,
+    DB_NAME(r.database_id) AS database_name,
+    SUBSTRING(
+        t.text,
+        (r.statement_start_offset / 2) + 1,
+        ((CASE r.statement_end_offset
+            WHEN -1 THEN DATALENGTH(t.text)
+            ELSE r.statement_end_offset
+          END - r.statement_start_offset) / 2) + 1
+    ) AS running_statement
+FROM sys.dm_exec_requests r
+JOIN sys.dm_exec_sessions s
+    ON r.session_id = s.session_id
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t
+WHERE s.is_user_process = 1
+ORDER BY r.total_elapsed_time DESC;
