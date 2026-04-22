@@ -1,0 +1,16 @@
+Issue:
+Error Number: 1205, Severity: 13, State: 80, Line: 1130, Message: Transaction (Process ID 137) was deadlocked on communication buffer | generic waitable object resources with another process and has been chosen as the deadlock victim. Rerun the transaction.
+
+Solution :
+OPTION (MAXDOP 1) is a query hint in Microsoft SQL Server that forces the query optimizer to use only one CPU core (i.e., no parallelism) when executing that specific query.
+
+What it does
+MAXDOP = Maximum Degree of Parallelism
+Setting it to 1 means:
+The query runs serially (single-threaded)
+SQL Server will not split the workload across multiple CPUs
+When it’s useful
+Preventing excessive CPU usage from parallel queries
+Avoiding parallelism overhead on small or fast queries
+Troubleshooting performance issues caused by parallel execution
+Reducing contention in high-concurrency systems
