@@ -1,0 +1,43 @@
+--History of Queries
+
+SELECT
+    name,
+    is_query_store_on
+FROM sys.databases;
+
+-- Get Plan Info etc
+EXEC sp_WhoIsActive
+    @get_transaction_info = 1,
+    @get_plans = 1,
+    @return_schema = 1;
+
+--Top long-running queries from Query Store
+
+Use [YourDB]
+GO
+SELECT TOP 50
+    qt.query_sql_text,
+    rs.avg_duration / 1000.0 AS avg_duration_ms,
+    rs.max_duration / 1000.0 AS max_duration_ms,
+    rs.count_executions,
+    rs.avg_cpu_time,
+    rs.avg_logical_io_reads,
+    CAST(rs.last_execution_time AS datetime) AS last_execution_time
+FROM sys.query_store_query_text qt
+JOIN sys.query_store_query q
+    ON qt.query_text_id = q.query_text_id
+JOIN sys.query_store_plan p
+    ON q.query_id = p.query_id
+JOIN sys.query_store_runtime_stats rs
+    ON p.plan_id = rs.plan_id
+ORDER BY rs.max_duration DESC;
+
+Use actual execution plan progress:
+SET STATISTICS XML ON;
+EXEC sp_WhoIsActive
+    @get_transaction_info = 1,
+    @get_plans = 1,
+    @return_schema = 1;
+
+
+--
