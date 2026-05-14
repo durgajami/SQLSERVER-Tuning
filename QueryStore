@@ -38,6 +38,118 @@ EXEC sp_WhoIsActive
     @get_transaction_info = 1,
     @get_plans = 1,
     @return_schema = 1;
-
-
 --
+
+--1. Find currently running slow queries
+SELECT
+    r.session_id,
+    r.status,
+    r.command,
+    r.cpu_time,
+    r.total_elapsed_time,
+    r.reads,
+    r.writes,
+    r.logical_reads,
+    r.wait_type,
+    r.wait_time,
+    r.blocking_session_id,
+    r.percent_complete,
+    DB_NAME(r.database_id) AS database_name,
+    SUBSTRING(
+        t.text,
+        (r.statement_start_offset / 2) + 1,
+        (
+            (
+                CASE r.statement_end_offset
+                    WHEN -1 THEN DATALENGTH(t.text)
+                    ELSE r.statement_end_offset
+                END - r.statement_start_offset
+            ) / 2
+        ) + 1
+    ) AS current_statement,
+    t.text AS full_batch
+FROM sys.dm_exec_requests r
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t
+WHERE r.session_id > 50
+ORDER BY r.total_elapsed_time DESC;
+
+--2. See what the query is waiting on
+SELECT
+    session_id,
+    wait_type,
+    wait_time,
+    last_wait_type,
+    blocking_session_id
+FROM sys.dm_exec_requests
+WHERE session_id > 50;
+
+--3. Find blocking chains
+SELECT
+    blocking_session_id,
+    session_id,
+    wait_type,
+    wait_time,
+    status,
+    command
+FROM sys.dm_exec_requests
+WHERE blocking_session_id <> 0;
+
+--4. See the live execution plan
+SELECT
+    r.session_id,
+    qp.query_plan
+FROM sys.dm_exec_requests r
+CROSS APPLY sys.dm_exec_query_plan(r.plan_handle) qp
+WHERE r.session_id = <SPID>;
+
+--5. Find the exact operator currently executing (advanced)
+SELECT
+    deqs.session_id,
+    deqs.node_id,
+    deqs.physical_operator_name,
+    deqs.row_count,
+    deqs.estimate_row_count,
+    deqs.first_active_time,
+    deqs.last_active_time
+FROM sys.dm_exec_query_profiles deqs
+WHERE session_id = <SPID>;
+
+--6. Use Activity Monitor (quick GUI)
+Right click server
+→ Activity Monitor
+→ Processes / Expensive Queries
+
+--7. Best real-time troubleshooting query (all-in-one)
+SELECT
+    r.session_id,
+    s.host_name,
+    s.program_name,
+    s.login_name,
+    r.status,
+    r.command,
+    r.cpu_time,
+    r.total_elapsed_time,
+    r.reads,
+    r.writes,
+    r.logical_reads,
+    r.wait_type,
+    r.wait_time,
+    r.blocking_session_id,
+    DB_NAME(r.database_id) AS database_name,
+    t.text
+FROM sys.dm_exec_requests r
+JOIN sys.dm_exec_sessions s
+    ON r.session_id = s.session_id
+CROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t
+WHERE r.session_id > 50
+ORDER BY r.cpu_time DESC;
+
+--Pro DBA tools
+sp_WhoIsActive
+First Responder Kit (sp_BlitzCache etc.)
+
+EXEC sp_WhoIsActive @get_plans = 1;
+
+
+
+
