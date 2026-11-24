@@ -1,0 +1,68 @@
+Q20. How would you upgrade SQL Server 2019 to SQL Server 2022 with minimal downtime?
+
+Suggested answer:
+1. Check application and feature compatibility.
+2. Check SQL Server build, edition and OS support.
+3. Review deprecated features and breaking changes.
+4. Build new SQL Server 2022 infrastructure.
+5. Configure logins, jobs, linked servers, credentials and permissions.
+6. Restore databases or configure an AG-based migration.
+7. Synchronize transaction logs.
+8. Schedule cutover.
+9. Redirect application connections.
+10. Validate performance, jobs and application functionality.
+
+Q21. How do you upgrade an AlwaysOn Availability Group?
+
+Explain rolling upgrade:
+1. Validate AG health and backup status.
+2. Upgrade secondary replicas first, one at a time.
+3. Allow synchronization to complete.
+4. Perform a planned failover to an upgraded secondary.
+5. Upgrade the remaining replica.
+6. Validate AG synchronization and application connectivity.
+Important: SQL Server does not support downgrading an upgraded database to an earlier major version. Keep the rollback strategy focused on retaining the old environment or using a supported failback approach before committing to the upgrade.
+
+Q22. How do you migrate a 10 TB database with minimal downtime?
+
+A strong answer:
+- Initial full backup.
+- Restore to target with NORECOVERY.
+- Apply differential and transaction log backups.
+- Keep applying transaction logs until cutover.
+- Stop application writes.
+- Take final tail-log backup if applicable.
+- Restore final log backup.
+- Recover the database.
+- Redirect application connections.
+- Validate data and application functionality.
+Alternative: Use AG-based migration where supported.
+
+Q23. What would you migrate besides the database files?
+
+This is frequently overlooked.
+- SQL logins and SID mappings.
+- SQL Agent jobs and schedules.
+- Linked servers.
+- Credentials and proxies.
+- Database Mail.
+- SSIS packages.
+- Certificates and encryption keys.
+- Server-level permissions.
+- Audits and alerts.
+- Maintenance plans.
+- Replication configuration.
+- Application connection strings.
+
+Q24. How do you minimize risk during a migration?
+
+Discuss:
+- Source and target inventory.
+- Dependency analysis.
+- Performance baseline.
+- Data validation and row counts.
+- Checksum validation where appropriate.
+- Migration rehearsal.
+- Cutover plan.
+- Rollback plan.
+- Post-migration monitoring.
