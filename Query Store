@@ -1,0 +1,25 @@
+--Query Store DMVs
+
+--Check if Query Store is enabled
+ SELECT actual_state_desc,    readonly_reason,    current_storage_size_mb 
+ FROM sys.database_query_store_options;
+
+Top Queries by Duration
+SELECT TOP 20     qt.query_sql_text,    SUM(rs.count_executions) AS executions,    AVG(rs.avg_duration) / 1000.0 AS avg_duration_ms
+FROM sys.query_store_query_text qt
+JOIN sys.query_store_query q     ON qt.query_text_id = q.query_text_id
+JOIN sys.query_store_plan p      ON q.query_id = p.query_id
+JOIN sys.query_store_runtime_stats rs     ON p.plan_id = rs.plan_id
+GROUP BY qt.query_sql_text
+ORDER BY avg_duration_ms DESC;
+
+Find Queries with Multiple Plans (Potential Regression)
+SELECT     q.query_id,    COUNT(DISTINCT p.plan_id) AS plan_count
+FROM sys.query_store_query q
+JOIN sys.query_store_plan p     ON q.query_id = p.query_id
+GROUP BY q.query_id
+HAVING COUNT(DISTINCT p.plan_id) > 1
+ORDER BY plan_count DESC;
+
+Key Columns
+ q.query_id,    p.plan_id,    rs.avg_duration,    rs.avg_cpu_time,    rs.count_executions, qt.query_sql_text
