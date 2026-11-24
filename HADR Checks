@@ -1,0 +1,55 @@
+Q32. How would you automate AlwaysOn health checks?
+
+$query = @"
+SELECT
+    ag.name,
+    ar.replica_server_name,
+    ars.role_desc,
+    ars.connected_state_desc,
+    ars.operational_state_desc
+FROM sys.availability_groups ag
+JOIN sys.availability_replicas ar
+    ON ag.group_id = ar.group_id
+LEFT JOIN sys.dm_hadr_availability_replica_states ars
+    ON ar.replica_id = ars.replica_id;
+"@
+
+Invoke-Sqlcmd `
+    -ServerInstance "SQLPROD01" `
+    -Database master `
+    -Query $query
+
+Q49. How would you migrate SQL Server data to Snowflake or Databricks?
+
+Discuss:
+1. Extract data from SQL Server.
+2. Use CDC or incremental extraction for ongoing changes.
+3. Land data in cloud object storage.
+4. Load into Snowflake or Delta Lake.
+5. Apply transformations.
+6. Validate row counts and data quality.
+7. Reconcile incremental changes.
+8. Implement monitoring and scheduling.
+
+8. Real-world senior DBA scenario questions
+These are particularly important because senior-level interviews often focus on production incidents rather than textbook definitions.
+Scenario	What the interviewer expects
+AG secondary is disconnected	Endpoint, network, WSFC, replica health, SQL error logs
+AG synchronization is suspended	Check database state, log transport, disk and network
+Primary server crashes	Automatic/manual failover, quorum, recovery
+Database is in SUSPECT state	Error logs, storage, DBCC CHECKDB, restore strategy
+Transaction log is full	Log reuse wait, backups, long transactions, AG replication
+Database migration takes too long	Backup throughput, network, log generation, parallel restore
+SQL Server CPU is continuously high	Query Store, execution plans, waits, CPU-intensive queries
+Application reports intermittent timeout	Blocking, network, connection pooling, resource pressure
+DR site is several hours behind	Log send queue, redo queue, network bandwidth, workload
+Upgrade causes performance regression	Compatibility level, Query Store, plan changes, cardinality estimator
+
+Q52. A SQL Server database migration fails halfway through. What is your approach?
+- Identify the failure point.
+- Check backup integrity and restore sequence.
+- Verify LSN continuity for log backups.
+- Check available storage.
+- Check SQL Server error logs.
+- Resume from the last successfully restored backup if possible.
+- Otherwise restart according to the migration recovery plan.
