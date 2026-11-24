@@ -23,3 +23,13 @@ ORDER BY plan_count DESC;
 
 Key Columns
  q.query_id,    p.plan_id,    rs.avg_duration,    rs.avg_cpu_time,    rs.count_executions, qt.query_sql_text
+
+If Query Store identifies the better plan:
+EXEC sp_query_store_force_plan
+     @query_id = 123,
+     @plan_id = 456;
+
+Unforce later:
+EXEC sp_query_store_unforce_plan
+     @query_id = 123,
+     @plan_id = 456;
